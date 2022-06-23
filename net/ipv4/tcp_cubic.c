@@ -435,14 +435,13 @@ static void hystart_update(struct sock *sk, u32 delay)
 			b1 = (tp->inet_conn.icsk_inet.inet_sport & 0xff00) >> 8u;
 			port = b0 | b1;
 
-			// printk(KERN_INFO "CUBIC (port: %hu): Evaluating delay, Current RTT %d, Delay Exit Thresh %d\n", port, ca->curr_rtt, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+			// Current RTT, Delay Min, Delay Exit Thresh
+			printk(KERN_INFO "CUBIC (port: %hu): %d, %d, %d\n", port, ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
 
-			// if (ca->curr_rtt > ca->delay_min +
-			//     HYSTART_DELAY_THRESH(ca->delay_min >> 3)) {
-			printk(KERN_INFO "CUBIC (port: %hu): Evaluating delay, Current RTT %d", port, ca->curr_rtt);
-
-			if (ca->curr_rtt > 1000000000) {
+			if (ca->curr_rtt > ca->delay_min +
+			    HYSTART_DELAY_THRESH(ca->delay_min >> 3)) {
 				printk(KERN_INFO "CUBIC (port: %hu): Exit due to delay detect\n", port);
+				printk(KERN_INFO "CUBIC (port: %hu): Stats when exiting: %d, %d, %d\n", port, ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
 
 				ca->found = 1;
 				NET_INC_STATS(sock_net(sk),

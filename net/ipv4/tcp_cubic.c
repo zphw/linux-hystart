@@ -465,6 +465,12 @@ static void cubictcp_acked(struct sock *sk, const struct ack_sample *sample)
 	struct bictcp *ca = inet_csk_ca(sk);
 	u32 delay;
 
+	int port;
+	uint16_t b0, b1;
+	b0 = (tp->inet_conn.icsk_inet.inet_sport & 0x00ff) << 8u;
+	b1 = (tp->inet_conn.icsk_inet.inet_sport & 0xff00) >> 8u;
+	port = b0 | b1;
+
 	/* Some calls are for duplicates without timetamps */
 	if (sample->rtt_us < 0)
 		return;

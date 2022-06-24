@@ -100,12 +100,14 @@ struct bictcp {
 	u32	end_seq;	/* end_seq of the round */
 	u32	last_ack;	/* last time when the ACK spacing is close */
 	u32	curr_rtt;	/* the minimum rtt of current round */
+	u8  ignore_cnt;
 };
 
 static inline void bictcp_reset(struct bictcp *ca)
 {
 	memset(ca, 0, offsetof(struct bictcp, unused));
 	ca->found = 0;
+	ca->ignore_cnt = 0;
 }
 
 static inline u32 bictcp_clock_us(const struct sock *sk)
@@ -426,8 +428,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 		/* obtain the minimum delay of more than sampling packets */
 		if (ca->curr_rtt > delay)
 			ca->curr_rtt = delay;
+
 		if (ca->sample_cnt < HYSTART_MIN_SAMPLES) {
-			ca->sample_cnt++;
+			if (ca->ignore_cnt > 70)
+				ca->sample_cnt++;
 		} else {
 			int port;
 			uint16_t b0, b1;
@@ -473,14 +477,23 @@ static void cubictcp_acked(struct sock *sk, const struct ack_sample *sample)
 	if (delay == 0)
 		delay = 1;
 
-	/* first time call or link delay decreases */
-	if (ca->delay_min == 0 || ca->delay_min > delay)
-		ca->delay_min = delay;
+	if (ca->ignore_cnt <= 70)
+	{
+		ca->ignore_cnt++;
+		printk(KERN_INFO "CUBIC (port: %hu): Ignored %d packet(s)\n", port, ca->ignore_cnt);
+	}
+	else
+	{
+		/* first time call or link delay decreases */
+		if (ca->delay_min == 0 || ca->delay_min > delay)
+			ca->delay_min = delay;
 
-	/* hystart triggers when cwnd is larger than some threshold */
-	if (!ca->found && tcp_in_slow_start(tp) && hystart &&
-	    tcp_snd_cwnd(tp) >= hystart_low_window)
-		hystart_update(sk, delay);
+		/* hystart triggers when cwnd is larger than some threshold */
+		if (!ca->found && tcp_in_slow_start(tp) && hystart &&
+		    tcp_snd_cwnd(tp) >= hystart_low_window)
+			hystart_update(sk, delay);
+	}
+	
 }
 
 static struct tcp_congestion_ops cubictcp __read_mostly = {
@@ -490,7 +503,7 @@ static struct tcp_congestion_ops cubictcp __read_mostly = {
 	.set_state	= cubictcp_state,
 	.undo_cwnd	= tcp_reno_undo_cwnd,
 	.cwnd_event	= cubictcp_cwnd_event,
-	.pkts_acked     = cubictcp_acked,
+	.pkts_acked = cubictcp_acked,
 	.owner		= THIS_MODULE,
 	.name		= "cubic",
 };

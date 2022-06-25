@@ -416,7 +416,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 				threshold >>= 1;
 
 			printk(KERN_INFO "CUBIC (port: %hu) ACK time %u, threshold is %u. delay_min %u (+ ack_delay %u) cwnd %u\n", port,
-				now - ca->round_startca->curr_rtt, threshold,
+				now - ca->round_start, threshold,
 				ca->delay_min, hystart_ack_delay(sk), tcp_snd_cwnd(tp));
 
 			if ((s32)(now - ca->round_start) > threshold) {

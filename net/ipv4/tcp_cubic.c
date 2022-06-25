@@ -389,6 +389,12 @@ static void hystart_update(struct sock *sk, u32 delay)
 	struct bictcp *ca = inet_csk_ca(sk);
 	u32 threshold;
 
+	int port;
+	uint16_t b0, b1;
+	b0 = (tp->inet_conn.icsk_inet.inet_sport & 0x00ff) << 8u;
+	b1 = (tp->inet_conn.icsk_inet.inet_sport & 0xff00) >> 8u;
+	port = b0 | b1;
+
 	if (after(tp->snd_una, ca->end_seq))
 		bictcp_hystart_reset(sk);
 
@@ -408,6 +414,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 			 */
 			if (sk->sk_pacing_status == SK_PACING_NONE)
 				threshold >>= 1;
+
+			printk(KERN_INFO "CUBIC (port: %hu) ACK time %u, threshold is %u. delay_min %u (+ ack_delay %u) cwnd %u\n", port,
+				now - ca->round_startca->curr_rtt, threshold,
+				ca->delay_min, hystart_ack_delay(sk), tcp_snd_cwnd(tp));
 
 			if ((s32)(now - ca->round_start) > threshold) {
 				ca->found = 1;
@@ -430,22 +440,19 @@ static void hystart_update(struct sock *sk, u32 delay)
 			ca->curr_rtt = delay;
 
 		if (ca->sample_cnt < HYSTART_MIN_SAMPLES) {
-			if (ca->ignore_cnt > 70)
-				ca->sample_cnt++;
+			// if (ca->ignore_cnt > 70)
+			ca->sample_cnt++;
 		} else {
-			int port;
-			uint16_t b0, b1;
-			b0 = (tp->inet_conn.icsk_inet.inet_sport & 0x00ff) << 8u;
-			b1 = (tp->inet_conn.icsk_inet.inet_sport & 0xff00) >> 8u;
-			port = b0 | b1;
 
 			// Current RTT, Delay Min, Delay Exit Thresh
-			printk(KERN_INFO "CUBIC (port: %hu): %d, %d, %d\n", port, ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+			// printk(KERN_INFO "CUBIC (port: %hu): %d, %d, %d\n", port, ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
 
 			if (ca->curr_rtt > ca->delay_min +
 			    HYSTART_DELAY_THRESH(ca->delay_min >> 3)) {
+				/*
 				printk(KERN_INFO "CUBIC (port: %hu): Exit due to delay detect\n", port);
 				printk(KERN_INFO "CUBIC (port: %hu): Stats when exiting: %d, %d, %d\n", port, ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+				*/
 
 				ca->found = 1;
 				NET_INC_STATS(sock_net(sk),
@@ -483,22 +490,23 @@ static void cubictcp_acked(struct sock *sk, const struct ack_sample *sample)
 	if (delay == 0)
 		delay = 1;
 
-	if (ca->ignore_cnt <= 70)
+	/*if (ca->ignore_cnt <= 70)
 	{
 		ca->ignore_cnt++;
 		printk(KERN_INFO "CUBIC (port: %hu): Ignored %d packet(s)\n", port, ca->ignore_cnt);
 	}
 	else
 	{
-		/* first time call or link delay decreases */
-		if (ca->delay_min == 0 || ca->delay_min > delay)
-			ca->delay_min = delay;
+		
+	}*/
+	/* first time call or link delay decreases */
+	if (ca->delay_min == 0 || ca->delay_min > delay)
+		ca->delay_min = delay;
 
-		/* hystart triggers when cwnd is larger than some threshold */
-		if (!ca->found && tcp_in_slow_start(tp) && hystart &&
-		    tcp_snd_cwnd(tp) >= hystart_low_window)
-			hystart_update(sk, delay);
-	}
+	/* hystart triggers when cwnd is larger than some threshold */
+	if (!ca->found && tcp_in_slow_start(tp) && hystart &&
+	    tcp_snd_cwnd(tp) >= hystart_low_window)
+		hystart_update(sk, delay);
 	
 }
 

@@ -103,6 +103,9 @@ struct bictcp {
 	u8  ignore_cnt;
 };
 
+int round_id = 0;
+u32 last_round_start = 0;
+
 static inline void bictcp_reset(struct bictcp *ca)
 {
 	memset(ca, 0, offsetof(struct bictcp, unused));
@@ -402,8 +405,19 @@ static void hystart_update(struct sock *sk, u32 delay)
 		u32 now = bictcp_clock_us(sk);
 
 		threshold = ca->delay_min + hystart_ack_delay(sk);
-		printk(KERN_INFO "CUBIC (port: %hu) [Round %u] Now %u, Since last ACK %u. delay_min %u, threshold %u\n", port, ca->round_start,
-			now, (now - ca->last_ack), ca->delay_min, threshold);
+		threshold >>= 1;
+
+		if (port == 12222)
+		{
+			if (last_round_start != ca->round_start)
+			{
+				round_id++;
+				last_round_start = ca->round_start;
+			}
+
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since last ACK %u. delay_min %u, threshold %u\n", port, round_id,
+				now, ca->round_start, (now - ca->last_ack), ca->delay_min, threshold);
+		}
 
 		/* first detection parameter - ack-train detection */
 		if ((s32)(now - ca->last_ack) <= hystart_ack_delta_us) {

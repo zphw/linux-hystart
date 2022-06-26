@@ -424,6 +424,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 		/* first detection parameter - ack-train detection */
 		if ((s32)(now - ca->last_ack) <= hystart_ack_delta_us) {
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] detection triggered, now %u\n", port, round_id, now);
+
 			ca->last_ack = now;
 
 			threshold = ca->delay_min + hystart_ack_delay(sk);

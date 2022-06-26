@@ -401,6 +401,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now = bictcp_clock_us(sk);
 
+		threshold = ca->delay_min + hystart_ack_delay(sk);
+		printk(KERN_INFO "CUBIC (port: %hu) [Round %u] Now %u, Since last ACK %u. delay_min %u, threshold %u\n", port, ca->round_start
+			now, (now - ca->last_ack), ca->delay_min, threshold);
+
 		/* first detection parameter - ack-train detection */
 		if ((s32)(now - ca->last_ack) <= hystart_ack_delta_us) {
 			ca->last_ack = now;
@@ -414,10 +418,6 @@ static void hystart_update(struct sock *sk, u32 delay)
 			 */
 			if (sk->sk_pacing_status == SK_PACING_NONE)
 				threshold >>= 1;
-
-			printk(KERN_INFO "CUBIC (port: %hu) ACK time %u, threshold is %u. delay_min %u (+ ack_delay %u) cwnd %u\n", port,
-				now - ca->round_start, threshold,
-				ca->delay_min, hystart_ack_delay(sk), tcp_snd_cwnd(tp));
 
 			if ((s32)(now - ca->round_start) > threshold) {
 				ca->found = 1;

@@ -415,8 +415,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 				last_round_start = ca->round_start;
 			}
 
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since last ACK %u. delay_min %u, threshold %u\n", port, round_id,
-				now, ca->round_start, (now - ca->last_ack), ca->delay_min, threshold);
+			if (ca->curr_rtt > delay)
+				ca->curr_rtt = delay;
+
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since first ACK %u. Curr RTT %u, Min RTT %u, Threshold %u\n", port, round_id,
+				now, ca->round_start, (now - ca->last_ack), ca->curr_rtt, ca->delay_min, threshold);
 		}
 
 		/* first detection parameter - ack-train detection */

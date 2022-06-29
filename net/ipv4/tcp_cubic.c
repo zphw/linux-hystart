@@ -391,7 +391,6 @@ static void hystart_update(struct sock *sk, u32 delay)
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct bictcp *ca = inet_csk_ca(sk);
 	u32 threshold;
-	u64 bitrate = 0;
 
 	int port;
 	uint16_t b0, b1;
@@ -420,10 +419,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 				ca->curr_rtt = delay;
 
 			if ((now - ca->round_start) > 0)
-				bitrate = tp->bytes_received / (now - ca->round_start) / 1024 / 1024;
-
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes Received %llu, Sent %llu, ACKed %llu, Bitrate %llu Mb/s\n", port, round_id,
-				now, ca->round_start, tp->bytes_received, tp->bytes_sent, tp->bytes_acked, bitrate);
+				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes Received %llu, Sent %llu, Bitrate %f Mb/s\n", port, round_id,
+					now, ca->round_start, tp->bytes_received, tp->bytes_sent, ((double) tp->bytes_sent / (1024 * 1024)));
 		}
 
 		/* first detection parameter - ack-train detection */

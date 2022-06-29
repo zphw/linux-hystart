@@ -105,6 +105,7 @@ struct bictcp {
 
 int round_id = 0;
 u32 last_round_start = 0;
+u64 last_ack_bytes_sent = 0;
 
 static inline void bictcp_reset(struct bictcp *ca)
 {
@@ -419,8 +420,9 @@ static void hystart_update(struct sock *sk, u32 delay)
 				ca->curr_rtt = delay;
 
 			if ((now - ca->round_start) > 0)
-				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes Received %llu, Sent %llu, Bitrate %lld Mb/s\n", port, round_id,
-					now, ca->round_start, tp->bytes_received, tp->bytes_sent, (tp->bytes_sent / (1024 * 1024)));
+				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes Sent %llu, Bitrate %lld Mb/s\n", port, round_id,
+					now, ca->round_start, tp->bytes_sent, ((tp->bytes_sent-last_ack_bytes_sent) / ((now - ca->round_start) / 1000000) / (1024 * 1024)));
+			last_ack_bytes_sent = tp->bytes_sent;
 		}
 
 		/* first detection parameter - ack-train detection */

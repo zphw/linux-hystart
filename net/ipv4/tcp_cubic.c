@@ -418,13 +418,14 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since first ACK %u. Curr RTT %u, Min RTT %u, Threshold %u\n", port, round_id,
-				now, ca->round_start, (now - ca->last_ack), ca->curr_rtt, ca->delay_min, threshold);
+			u64 bitrate = tp->bytes_acked / (now - ca->round_start);
+
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since previous ACK %u. Bitrate %u\n", port, round_id,
+				now, ca->round_start, (now - ca->last_ack), bitrate);
 		}
 
 		/* first detection parameter - ack-train detection */
 		if ((s32)(now - ca->last_ack) <= hystart_ack_delta_us) {
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] detection triggered, now %u\n", port, round_id, now);
 
 			ca->last_ack = now;
 

@@ -418,9 +418,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			u64 bitrate = tp->bytes_acked / (now - ca->round_start);
+			u64 bitrate = 0;
+			if ((now - ca->round_start) > 0)
+				bitrate = tp->bytes_acked / (now - ca->round_start) / 1024 / 1024;
 
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since previous ACK %u. Bitrate %u\n", port, round_id,
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since previous ACK %u. Bitrate %llu Mb/s\n", port, round_id,
 				now, ca->round_start, (now - ca->last_ack), bitrate);
 		}
 

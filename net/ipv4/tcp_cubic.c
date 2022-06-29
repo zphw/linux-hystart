@@ -420,10 +420,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 				ca->curr_rtt = delay;
 
 			if ((now - ca->round_start) > 0)
-				bitrate = tp->bytes_acked / (now - ca->round_start) / 1024 / 1024;
+				bitrate = tp->bytes_received / (now - ca->round_start) / 1024 / 1024;
 
-			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since previous ACK %u. Bitrate %llu Mb/s\n", port, round_id,
-				now, ca->round_start, (now - ca->last_ack), bitrate);
+			printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes Received %llu, Sent %llu, ACKed %llu, Bitrate %llu Mb/s\n", port, round_id,
+				now, ca->round_start, tp->bytes_received, tp->bytes_sent, tp->bytes_acked, bitrate);
 		}
 
 		/* first detection parameter - ack-train detection */

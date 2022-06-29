@@ -391,6 +391,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct bictcp *ca = inet_csk_ca(sk);
 	u32 threshold;
+	u64 bitrate = 0;
 
 	int port;
 	uint16_t b0, b1;
@@ -418,7 +419,6 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			u64 bitrate = 0;
 			if ((now - ca->round_start) > 0)
 				bitrate = tp->bytes_acked / (now - ca->round_start) / 1024 / 1024;
 

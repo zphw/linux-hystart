@@ -106,6 +106,8 @@ struct bictcp {
 int round_id = 0;
 u32 last_round_start = 0;
 u64 last_ack_bytes_sent = 0;
+u32 last_packet_time = 0;
+u64 last_packet_bytes = 0;
 
 static inline void bictcp_reset(struct bictcp *ca)
 {
@@ -420,21 +422,26 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			if ((now - ca->last_ack) > 100)
+			if (last_packet_bytes == 0)
+				last_packet_bytes = tp->bytes_sent;
+			else if (last_packet_bytes != 0 && last_packet_time != 0 && (now - ca->last_ack) > 100)
 			{
-				u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
-				u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->round_start)) / (1000 * 1000);
-				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bitrate %lld Mb/s\n",
-					port, round_id, now, ca->round_start, bitrate);
+				// u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
+				// u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->round_start)) / (1000 * 1000);
+				u64 packet_bytes = tp->bytes_sent - last_packet_bytes;
+				u64 packet_time = now - last_packet_time;
+				u64 est_bd = (packet_bytes * 8 * 1000000 / packet_time) / (1000 * 1000);
+				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Est. Bandwidth %lld Mb/s\n",
+					port, round_id, now, ca->round_start, est_bd);
 
 				// force to exit slow start
-				if (bitrate < 300 && bitrate >= 114)
-				{
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, exit slow start\n",
-						port, round_id, now, bitrate);
-					ca->found = 1;
-					tp->snd_ssthresh = tcp_snd_cwnd(tp);
-				}
+				// if (bitrate < 300 && bitrate >= 114)
+				// {
+				// 	printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, exit slow start\n",
+				// 		port, round_id, now, bitrate);
+				// 	ca->found = 1;
+				// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
+				// }
 			}
 		}
 

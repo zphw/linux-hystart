@@ -420,7 +420,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			if ((now - ca->last_ack) > 200000)
+			if ((now - ca->last_ack) > 100)
 			{
 				u64 curr_bytes_sent = (tp->bytes_sent - last_ack_bytes_sent) / 1000000;
 				u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->last_ack)) / (1000 * 1000);

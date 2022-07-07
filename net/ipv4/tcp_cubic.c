@@ -421,7 +421,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			if (((now - ca->last_ack) / 1000000) > 0)
 				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since last ACK %u, Bitrate %lld B/s\n", port, round_id,
-					now, ca->round_start, (now - ca->last_ack), (bytes_sent * 1000000 / (now - ca->last_ack)));
+					now, ca->round_start, (now - ca->last_ack), (tp->bytes_sent * 1000000 / (now - ca->last_ack)));
 		}
 
 		/* first detection parameter - ack-train detection */

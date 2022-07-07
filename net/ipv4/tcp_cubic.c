@@ -428,12 +428,12 @@ static void hystart_update(struct sock *sk, u32 delay)
 					port, round_id, now, ca->round_start, bitrate);
 
 				// force to exit slow start
-				if (bitrate >= 114)
+				if (bitrate < 300 && bitrate >= 114)
 				{
-					// printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, supposed to exit slow start\n",
-					//	port, round_id, now, bitrate);
-					// ca->found = 1;
-					// tp->snd_ssthresh = tcp_snd_cwnd(tp);
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, exit slow start\n",
+						port, round_id, now, bitrate);
+					ca->found = 1;
+					tp->snd_ssthresh = tcp_snd_cwnd(tp);
 				}
 			}
 		}

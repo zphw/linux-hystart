@@ -414,6 +414,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			{
 				round_id++;
 				last_round_start = ca->round_start;
+				last_ack_bytes_sent = tp->bytes_sent;
 			}
 
 			if (ca->curr_rtt > delay)
@@ -421,16 +422,17 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			if ((now - ca->last_ack) > 200000)
 			{
-				u64 bitrate = (tp->bytes_sent * 1000000 / (now - ca->last_ack)) / (1024 * 1024);
-				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since last ACK %u, Bitrate %lld Mb/s\n",
-					port, round_id, now, ca->round_start, (now - ca->last_ack), bitrate);
+				u64 curr_bytes_sent = (tp->bytes_sent - last_ack_bytes_sent) / 1000000;
+				u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->last_ack)) / (1000 * 1000);
+				printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Since last ACK %u, Total Bytes Sent %lld, Current Bytes Send %lld, Bitrate %lld Mb/s\n",
+					port, round_id, now, ca->round_start, (now - ca->last_ack), tp->bytes_sent / 1000000, curr_bytes_sent, bitrate);
 
 				// force to exit slow start
-				if (bitrate < 200 && bitrate >= 114) {
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, exiting slow start\n",
-						port, round_id, now);
-					ca->found = 1;
-					tp->snd_ssthresh = tcp_snd_cwnd(tp);
+				if (bitrate >= 114) {
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, supposed to exit slow start\n",
+						port, round_id, now, bitrate);
+					// ca->found = 1;
+					// tp->snd_ssthresh = tcp_snd_cwnd(tp);
 				}
 			}
 		}

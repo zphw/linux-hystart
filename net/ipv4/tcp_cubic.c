@@ -426,7 +426,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			{
 				// u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
 				// u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->round_start)) / (1000 * 1000);
-				u32 packet_bytes = tp->snd_una - last_packet_bytes;
+				u32 packet_bytes = last_packet_bytes - tp->snd_una;
 				u64 packet_time = now - last_packet_time;
 				if (packet_time > 0 && packet_time <= 2000)
 				{

@@ -416,7 +416,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			{
 				round_id++;
 				last_round_start = ca->round_start;
-				last_ack_bytes_sent = tp->bytes_sent;
+				last_ack_bytes_sent = tp->bytes_acked;
 			}
 
 			if (ca->curr_rtt > delay)
@@ -426,20 +426,20 @@ static void hystart_update(struct sock *sk, u32 delay)
 			{
 				// u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
 				// u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->round_start)) / (1000 * 1000);
-				u64 packet_bytes = tp->bytes_sent - last_packet_bytes;
+				u64 packet_bytes = tp->bytes_acked - last_packet_bytes;
 				u64 packet_time = now - last_packet_time;
 				if (packet_time > 0 && packet_time <= 2000)
 				{
 					u64 est_bd = (packet_bytes * 8 * 1000000 / packet_time) / (1000 * 1000);
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Est. bandwidth %lld Mb/s\n",
-						port, round_id, now, ca->round_start, est_bd);
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes ACKed %lld, Est. bandwidth %lld Mb/s\n",
+						port, round_id, now, ca->round_start, tp->bytes_acked, est_bd);
 				}
 				else if (packet_time > 2000)
 				{
 					u64 est_bd = (packet_bytes * 8 * 1000000 / packet_time) / (1000 * 1000);
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Est. bandwidth %lld Mb/s\n",
-						port, round_id, now, ca->round_start, est_bd);
-					last_packet_bytes = tp->bytes_sent;
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Bytes ACKed %lld, Est. bandwidth %lld Mb/s\n",
+						port, round_id, now, ca->round_start, tp->bytes_acked, est_bd);
+					last_packet_bytes = tp->bytes_acked;
 					last_packet_time = now;
 				}
 				
@@ -455,7 +455,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			}
 			else
 			{
-				last_packet_bytes = tp->bytes_sent;
+				last_packet_bytes = tp->bytes_acked;
 				last_packet_time = now;
 			}
 		}

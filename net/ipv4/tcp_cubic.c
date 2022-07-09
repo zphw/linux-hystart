@@ -107,7 +107,7 @@ int round_id = 0;
 u32 last_round_start = 0;
 u64 last_ack_bytes_sent = 0;
 
-u32 last_ack = 0;
+u32 last_ack_time = 0;
 u64 last_packet_bytes = 0;
 
 static inline void bictcp_reset(struct bictcp *ca)
@@ -423,13 +423,13 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			if (last_ack != 0)
+			if (last_ack_time != 0)
 			{
-				u32 packet_pair_time = now - last_ack;
+				u32 packet_pair_time = now - last_ack_time;
 				if (packet_pair_time > 0)
 				{
-					u64 est_packet_pair_bd = (1500ULL * 8 * 1000000 / packet_pair_time);
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %llu b/s\n",
+					u64 est_packet_pair_bd = (1500ULL * 8 * 1000000 / packet_pair_time) / (1000 * 1000);
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %llu Mb/s\n",
 						port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
 				}
 				
@@ -442,7 +442,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 				// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
 				// }
 			}
-			last_ack = now;
+			last_ack_time = now;
 		}
 
 		/* first detection parameter - ack-train detection */

@@ -428,8 +428,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 				u32 packet_pair_time = now - last_ack;
 				if (packet_pair_time > 0)
 				{
-					u64 packet_size_ms = 1500 * 8 * 1000000;
-					u64 est_packet_pair_bd = (packet_size_ms / packet_pair_time);
+					u64 est_packet_pair_bd = (1500ULL * 8 * 1000000 / packet_pair_time);
 					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %llu b/s\n",
 						port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
 				}

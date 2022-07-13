@@ -408,9 +408,6 @@ static void hystart_update(struct sock *sk, u32 delay)
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now = bictcp_clock_us(sk);
 
-		threshold = ca->delay_min + hystart_ack_delay(sk);
-		threshold >>= 1;
-
 		if (port == 12222)
 		{
 			if (last_round_start != ca->round_start)
@@ -426,10 +423,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (last_ack_time != 0)
 			{
 				u32 packet_pair_time = now - last_ack_time;
-				if (packet_pair_time > 0)
+				if (packet_pair_time > 0 && packet_pair_time <= 200)
 				{
-					u64 est_packet_pair_bd = (1500ULL * 8 * 1000000 / packet_pair_time) / (1000 * 1000);
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %llu Mb/s\n",
+					u32 est_packet_pair_bd = (1500 * 8 / packet_pair_time);
+					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
 						port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
 				}
 				

@@ -415,7 +415,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now = bictcp_clock_us(sk);
-		u64 bitrate;
+		u64 bitrate = 0;
 
 		if (port == 12222)
 		{
@@ -450,14 +450,14 @@ static void hystart_update(struct sock *sk, u32 delay)
 			// 	// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
 			// }
 
-			if (bitrate >= hystart_bitrate_exit_point)
-			{
-				printk(KERN_INFO "[CUBIC] Now %u, %lld >= %hu, exit slow start\n",
-					now, bitrate, hystart_bitrate_exit_point);
-				ca->found = 1;
-				tp->snd_ssthresh = tcp_snd_cwnd(tp);
-			}
-			ca->last_ack = now;
+			// if (bitrate >= hystart_bitrate_exit_point)
+			// {
+			// 	printk(KERN_INFO "[CUBIC] Now %u, %lld >= %hu, exit slow start\n",
+			// 		now, bitrate, hystart_bitrate_exit_point);
+			// 	ca->found = 1;
+			// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
+			// }
+
 			// ca->last_bytes_acked = tp->bytes_acked;
 			// ca->last_packet_time = now;
 		}

@@ -55,6 +55,8 @@ static int hystart_detect __read_mostly = HYSTART_ACK_TRAIN | HYSTART_DELAY;
 static int hystart_low_window __read_mostly = 16;
 static int hystart_ack_delta_us __read_mostly = 2000;
 
+static int hystart_bitrate_exit_point __read_mostly = 100;
+
 static u32 cube_rtt_scale __read_mostly;
 static u32 beta_scale __read_mostly;
 static u64 cube_factor __read_mostly;
@@ -79,6 +81,8 @@ module_param(hystart_low_window, int, 0644);
 MODULE_PARM_DESC(hystart_low_window, "lower bound cwnd for hybrid slow start");
 module_param(hystart_ack_delta_us, int, 0644);
 MODULE_PARM_DESC(hystart_ack_delta_us, "spacing between ack's indicating train (usecs)");
+module_param(hystart_bitrate_exit_point, int, 0644);
+MODULE_PARM_DESC(hystart_bitrate_exit_point, "Hystart bitrate exit point");
 
 /* BIC TCP Parameters */
 struct bictcp {
@@ -101,20 +105,22 @@ struct bictcp {
 	u32	last_ack;	/* last time when the ACK spacing is close */
 	u32	curr_rtt;	/* the minimum rtt of current round */
 	u8  ignore_cnt;
+	u64 last_bytes_acked;
+	u32 last_packet_time;
 };
 
 int round_id = 0;
 u32 last_round_start = 0;
 u64 last_ack_bytes_sent = 0;
 
-u32 last_ack_time = 0;
-u64 last_packet_bytes = 0;
 
 static inline void bictcp_reset(struct bictcp *ca)
 {
 	memset(ca, 0, offsetof(struct bictcp, unused));
 	ca->found = 0;
 	ca->ignore_cnt = 0;
+	ca->last_bytes_acked = 0;
+	ca->last_packet_time = 0;
 }
 
 static inline u32 bictcp_clock_us(const struct sock *sk)
@@ -410,36 +416,41 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 		if (port == 12222)
 		{
-			if (last_round_start != ca->round_start)
-			{
-				round_id++;
-				last_round_start = ca->round_start;
-				last_ack_bytes_sent = tp->bytes_acked;
-			}
+			// if (last_round_start != ca->round_start)
+			// {
+			// 	round_id++;
+			// 	last_round_start = ca->round_start;
+			// 	last_ack_bytes_sent = tp->bytes_acked;
+			// }
 
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			if (last_ack_time != 0)
+			u64 packet_bytes_diff = tp->bytes_acked - ca->last_bytes_acked;
+			u64 packet_time_diff = now - ca->last_packet_time;
+
+			u64 bitrate = packet_bytes_diff * 8 / packet_time_diff;
+			printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s\n",
+				now, bitrate);
+
+			// u32 packet_pair_time = now - last_ack_time;
+			// if (packet_pair_time > 0 && packet_pair_time <= 200)
+			// {
+			// 	u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
+			// 	// printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
+			// 	// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
+			// }
+
+			if (bitrate >= hystart_bitrate_exit_point)
 			{
-				u32 packet_pair_time = now - last_ack_time;
-				if (packet_pair_time > 0 && packet_pair_time <= 200)
-				{
-					u32 est_packet_pair_bd = (1500 * 8 / packet_pair_time);
-					printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
-						port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
-				}
-				
-				// force to exit slow start
-				// if (bitrate < 300 && bitrate >= 114)
-				// {
-				// 	printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, %lld > 114, exit slow start\n",
-				// 		port, round_id, now, bitrate);
-				// 	ca->found = 1;
-				// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
-				// }
+				printk(KERN_INFO "[CUBIC] Now %u, %lld >= %hu, exit slow start\n",
+					now, bitrate, hystart_bitrate_exit_point);
+				ca->found = 1;
+				tp->snd_ssthresh = tcp_snd_cwnd(tp);
 			}
-			last_ack_time = now;
+			ca->last_ack = now;
+			ca->last_bytes_acked = tp->bytes_acked;
+			ca->last_packet_time = now;
 		}
 
 		/* first detection parameter - ack-train detection */

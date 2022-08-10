@@ -112,6 +112,8 @@ struct bictcp {
 int round_id = 0;
 u32 last_round_start = 0;
 u64 last_ack_bytes_sent = 0;
+u32 last_packet_time = 0;
+u64 last_packet_bytes = 0;
 
 
 static inline void bictcp_reset(struct bictcp *ca)
@@ -413,6 +415,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now = bictcp_clock_us(sk);
+		u64 bitrate;
 
 		if (port == 12222)
 		{
@@ -426,12 +429,37 @@ static void hystart_update(struct sock *sk, u32 delay)
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			u64 packet_bytes_diff = tp->bytes_acked - ca->last_bytes_acked;
-			u64 packet_time_diff = now - ca->last_packet_time;
+			// u64 packet_bytes_diff = tp->bytes_acked - ca->last_bytes_acked;
+			// u64 packet_time_diff = now - ca->last_packet_time;
 
-			u64 bitrate = packet_bytes_diff * 8 / packet_time_diff;
-			printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s\n",
-				now, bitrate);
+			// u64 bitrate = packet_bytes_diff * 8 / packet_time_diff;
+
+			if (last_packet_bytes != 0 && last_packet_time != 0)
+			{
+				// u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
+				// u64 bitrate = (curr_bytes_sent * 8 * 1000000 / (now - ca->round_start)) / (1000 * 1000);
+				u64 packet_bytes = tp->bytes_acked - last_packet_bytes;
+				u64 packet_time = now - last_packet_time;
+				if (packet_time > 0 && packet_time <= 2000)
+				{
+					bitrate = (packet_bytes * 8) / packet_time;
+				}
+				else if (packet_time > 2000)
+				{
+					bitrate = (packet_bytes * 8) / packet_time;
+					last_packet_bytes = tp->bytes_acked;
+					last_packet_time = now;
+				}
+
+			}
+			else
+			{
+				last_packet_bytes = tp->bytes_acked;
+				last_packet_time = now;
+			}
+
+			printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",
+				now, bitrate, hystart_bitrate_exit_point);
 
 			// u32 packet_pair_time = now - last_ack_time;
 			// if (packet_pair_time > 0 && packet_pair_time <= 200)
@@ -449,8 +477,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 				tp->snd_ssthresh = tcp_snd_cwnd(tp);
 			}
 			ca->last_ack = now;
-			ca->last_bytes_acked = tp->bytes_acked;
-			ca->last_packet_time = now;
+			// ca->last_bytes_acked = tp->bytes_acked;
+			// ca->last_packet_time = now;
 		}
 
 		/* first detection parameter - ack-train detection */

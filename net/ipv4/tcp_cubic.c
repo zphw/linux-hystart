@@ -436,8 +436,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			if (now - ca->round_start != 0)
 			{
-				u64 curr_bytes_sent = tp->bytes_sent - last_ack_bytes_sent;
-				bitrate = (tp->bytes_sent - last_ack_bytes_sent * 8) / (now - ca->round_start);
+				bitrate = ((tp->bytes_sent - last_ack_bytes_sent) * 8) / (now - ca->round_start);
 			}
 
 			printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",

@@ -419,6 +419,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 		if (port == 12222)
 		{
+			u32 old_rtt;
 			if (last_round_start != ca->round_start)
 			{
 				round_id++;
@@ -426,6 +427,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 				last_ack_bytes_sent = tp->bytes_acked;
 			}
 
+			old_rtt = ca->curr_rtt;
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
@@ -439,8 +441,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 				bitrate = ((tp->bytes_sent - last_ack_bytes_sent) * 8) / (now - ca->round_start);
 			}
 
-			printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",
-				now, bitrate, hystart_bitrate_exit_point);
+			printk(KERN_INFO "[CUBIC] Now %u, sending cwnd %u, min RTT %u, RTT %u\n",
+				now, tp->snd_cwnd, ca->curr_rtt, old_rtt);
+
+			// printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",
+			// 	now, bitrate, hystart_bitrate_exit_point);
 
 			// u32 packet_pair_time = now - last_ack_time;
 			// if (packet_pair_time > 0 && packet_pair_time <= 200)
@@ -463,7 +468,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 		}
 
 		/* first detection parameter - ack-train detection */
-		if ((s32)(now - ca->last_ack) <= hystart_ack_delta_us) {
+		if (1 == 2) {
 
 			ca->last_ack = now;
 

@@ -105,15 +105,10 @@ struct bictcp {
 	u32	last_ack;	/* last time when the ACK spacing is close */
 	u32	curr_rtt;	/* the minimum rtt of current round */
 	u8  ignore_cnt;
-	u64 last_bytes_acked;
-	u32 last_packet_time;
 };
 
 int round_id = 0;
 u32 last_round_start = 0;
-u64 last_ack_bytes_sent = 0;
-u32 last_packet_time = 0;
-u64 last_packet_bytes = 0;
 
 
 static inline void bictcp_reset(struct bictcp *ca)
@@ -121,8 +116,6 @@ static inline void bictcp_reset(struct bictcp *ca)
 	memset(ca, 0, offsetof(struct bictcp, unused));
 	ca->found = 0;
 	ca->ignore_cnt = 0;
-	ca->last_bytes_acked = 0;
-	ca->last_packet_time = 0;
 }
 
 static inline u32 bictcp_clock_us(const struct sock *sk)
@@ -419,28 +412,19 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 		if (port == 12222)
 		{
-			if (last_round_start != ca->round_start)
-			{
-				round_id++;
-				last_round_start = ca->round_start;
-				last_ack_bytes_sent = tp->bytes_acked;
-			}
+			// if (last_round_start != ca->round_start)
+			// {
+			// 	round_id++;
+			// 	last_round_start = ca->round_start;
+			// }
 
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
-			// u64 packet_bytes_diff = tp->bytes_acked - ca->last_bytes_acked;
-			// u64 packet_time_diff = now - ca->last_packet_time;
-
-			// u64 bitrate = packet_bytes_diff * 8 / packet_time_diff;
-
 			bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 
-			printk(KERN_INFO "[CUBIC] Now %u, sendind MSS %u, sending cwnd %u, RTT %u, bitrate %u Mb/s\n",
-				now, tp->mss_cache, tp->snd_cwnd, ca->curr_rtt, bitrate);
-
-			// printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",
-			// 	now, bitrate, hystart_bitrate_exit_point);
+			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %u Mb/s, threshold %hu\n",
+				tp->snd_cwnd, ca->curr_rtt, bitrate, hystart_bitrate_exit_point);
 
 			// u32 packet_pair_time = now - last_ack_time;
 			// if (packet_pair_time > 0 && packet_pair_time <= 200)
@@ -450,16 +434,13 @@ static void hystart_update(struct sock *sk, u32 delay)
 			// 	// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
 			// }
 
-			// if (bitrate >= hystart_bitrate_exit_point)
-			// {
-			// 	printk(KERN_INFO "[CUBIC] Now %u, %lld >= %hu, exit slow start\n",
-			// 		now, bitrate, hystart_bitrate_exit_point);
-			// 	ca->found = 1;
-			// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
-			// }
-
-			// ca->last_bytes_acked = tp->bytes_acked;
-			// ca->last_packet_time = now;
+			if (bitrate >= hystart_bitrate_exit_point)
+			{
+				printk(KERN_INFO "[CUBIC] %lld >= %hu, exiting slow start\n",
+					bitrate, hystart_bitrate_exit_point);
+				ca->found = 1;
+				tp->snd_ssthresh = tcp_snd_cwnd(tp);
+			}
 		}
 
 		/* first detection parameter - ack-train detection */
@@ -548,15 +529,6 @@ static void cubictcp_acked(struct sock *sk, const struct ack_sample *sample)
 	if (delay == 0)
 		delay = 1;
 
-	/*if (ca->ignore_cnt <= 70)
-	{
-		ca->ignore_cnt++;
-		printk(KERN_INFO "CUBIC (port: %hu): Ignored %d packet(s)\n", port, ca->ignore_cnt);
-	}
-	else
-	{
-		
-	}*/
 	/* first time call or link delay decreases */
 	if (ca->delay_min == 0 || ca->delay_min > delay)
 		ca->delay_min = delay;

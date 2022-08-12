@@ -423,7 +423,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 
-			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %u Mb/s, threshold %hu\n",
+			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
 				tp->snd_cwnd, ca->curr_rtt, bitrate, hystart_bitrate_exit_point);
 
 			// u32 packet_pair_time = now - last_ack_time;

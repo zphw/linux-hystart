@@ -436,11 +436,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			if (now - ca->round_start != 0)
 			{
-				bitrate = ((tp->bytes_sent - last_ack_bytes_sent) * 8) / (now - ca->round_start);
+				bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 			}
 
-			printk(KERN_INFO "[CUBIC] Now %u, sending cwnd %u, RTT %u, bitrate b/s%u\n",
-				now, tp->snd_cwnd, ca->curr_rtt, (tp->snd_cwnd * 8000000 / ca->curr_rtt));
+			printk(KERN_INFO "[CUBIC] Now %u, sendind MSS %u, sending cwnd %u, RTT %u, bitrate %u Mb/s\n",
+				now, tp->mss_cache, tp->snd_cwnd, ca->curr_rtt, bitrate);
 
 			// printk(KERN_INFO "[CUBIC] Now %u, Birate %lld Mb/s, threshold %hu\n",
 			// 	now, bitrate, hystart_bitrate_exit_point);

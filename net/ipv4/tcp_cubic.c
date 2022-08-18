@@ -436,7 +436,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			if (bitrate >= hystart_bitrate_exit_point)
 			{
-				printk(KERN_INFO "[CUBIC] %lld >= %hu, exiting slow start\n",
+				printk(KERN_INFO "[CUBIC] %llu >= %hu, exiting slow start\n",
 					bitrate, hystart_bitrate_exit_point);
 				ca->found = 1;
 				tp->snd_ssthresh = tcp_snd_cwnd(tp);

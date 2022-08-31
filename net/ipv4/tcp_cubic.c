@@ -101,14 +101,14 @@ struct bictcp {
 	u8	sample_cnt;	/* number of samples to decide curr_rtt */
 	u8	found;		/* the exit point is found? */
 	u32	round_start;	/* beginning of each round */
+	u32	last_round_start;
 	u32	end_seq;	/* end_seq of the round */
 	u32	last_ack;	/* last time when the ACK spacing is close */
 	u32	curr_rtt;	/* the minimum rtt of current round */
 	u8  ignore_cnt;
+	u8  est_round_cnt;
+	u32 bandwidth_est_median;
 };
-
-int round_id = 0;
-u32 last_round_start = 0;
 
 
 static inline void bictcp_reset(struct bictcp *ca)
@@ -116,6 +116,9 @@ static inline void bictcp_reset(struct bictcp *ca)
 	memset(ca, 0, offsetof(struct bictcp, unused));
 	ca->found = 0;
 	ca->ignore_cnt = 0;
+	ca->bitrate_est_median = 0;
+	ca->last_round_start = 0;
+	ca->est_round_cnt = 0;
 }
 
 static inline u32 bictcp_clock_us(const struct sock *sk)
@@ -391,6 +394,16 @@ static u32 hystart_ack_delay(struct sock *sk)
 		     div64_ul((u64)GSO_MAX_SIZE * 4 * USEC_PER_SEC, rate));
 }
 
+static int sgn(int x)
+{
+	if (x > 0)
+		return 1;
+	else if (x == 0)
+		return 0;
+	else
+		return -1;
+}
+
 static void hystart_update(struct sock *sk, u32 delay)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -412,41 +425,51 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 		if (port == 12222)
 		{
-			// if (last_round_start != ca->round_start)
-			// {
-			// 	round_id++;
-			// 	last_round_start = ca->round_start;
-			// }
+			if (ca->last_round_start != ca->round_start)
+			{
+				ca->est_round_cnt++;
+				ca->last_round_start = ca->round_start;
+			}
 
 			if (ca->curr_rtt > delay)
 				ca->curr_rtt = delay;
 
 			bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 
+			// packet pair bandwidth estimation
+			u32 packet_pair_time = now - ca->last_ack;
+			if (packet_pair_time > 0 && packet_pair_time <= 200)
+			{
+				u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
+				// printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
+				// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
+
+				if (ca->bandwidth_est_median == 0)
+				{
+					ca->bandwidth_est_median = est_packet_pair_bd;
+				}
+				else
+				{
+					ca->bandwidth_est_median += (sgn(est_packet_pair_bd - ca->bandwidth_est_median) + 2 * 0.25 - 1);
+				}
+			}
+
 			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
-				tp->snd_cwnd, ca->curr_rtt, bitrate, hystart_bitrate_exit_point);
+				tp->snd_cwnd, ca->curr_rtt, bitrate, ca->bandwidth_est_median);
 
-			// u32 packet_pair_time = now - last_ack_time;
-			// if (packet_pair_time > 0 && packet_pair_time <= 200)
-			// {
-			// 	u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
-			// 	// printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
-			// 	// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
-			// }
-
-			if (bitrate >= hystart_bitrate_exit_point)
+			if (bitrate >= ca->bandwidth_est_median)
 			{
 				printk(KERN_INFO "[CUBIC] %llu >= %hu, exiting slow start\n",
-					bitrate, hystart_bitrate_exit_point);
+					bitrate, ca->bandwidth_est_median);
 				ca->found = 1;
 				tp->snd_ssthresh = tcp_snd_cwnd(tp);
 			}
 		}
 
+		ca->last_ack = now;
+
 		/* first detection parameter - ack-train detection */
 		if (1 == 2) {
-
-			ca->last_ack = now;
 
 			threshold = ca->delay_min + hystart_ack_delay(sk);
 

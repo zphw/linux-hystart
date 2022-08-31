@@ -419,7 +419,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 	if (after(tp->snd_una, ca->end_seq))
 		bictcp_hystart_reset(sk);
 
-	if (hystart_detect & HYSTART_ACK_TRAIN) {
+	if (hystart_detect & HYSTART_ACK_TRAIN)
+	{
 		u32 now = bictcp_clock_us(sk);
 		u64 bitrate = 0;
 		u32 packet_pair_time;
@@ -459,7 +460,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
 				tp->snd_cwnd, ca->curr_rtt, bitrate, ca->bandwidth_est_median);
 
-			if (bitrate >= ca->bandwidth_est_median)
+			if (ca->bandwidth_est_median > 0 && bitrate >= ca->bandwidth_est_median)
 			{
 				printk(KERN_INFO "[CUBIC] %llu >= %hu, exiting slow start\n",
 					bitrate, ca->bandwidth_est_median);

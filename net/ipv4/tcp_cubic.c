@@ -454,8 +454,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 					}
 					else
 					{
-						ca->bandwidth_est_median += sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1;
-						ca->bandwidth_est_median >>= 1;
+						ca->bandwidth_est_median += (sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1) >> 1;
 					}
 				}
 			}

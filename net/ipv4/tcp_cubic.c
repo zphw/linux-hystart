@@ -422,6 +422,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now = bictcp_clock_us(sk);
 		u64 bitrate = 0;
+		u32 packet_pair_time;
 
 		if (port == 12222)
 		{
@@ -437,7 +438,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 			bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 
 			// packet pair bandwidth estimation
-			u32 packet_pair_time = now - ca->last_ack;
+			packet_pair_time = now - ca->last_ack;
 			if (packet_pair_time > 0 && packet_pair_time <= 200)
 			{
 				u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
@@ -450,7 +451,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 				}
 				else
 				{
-					ca->bandwidth_est_median += (sgn(est_packet_pair_bd - ca->bandwidth_est_median) + 2 * 0.25 - 1);
+					ca->bandwidth_est_median += sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1;
+					ca->bandwidth_est_median >>= 1;
 				}
 			}
 

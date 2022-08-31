@@ -439,21 +439,24 @@ static void hystart_update(struct sock *sk, u32 delay)
 			bitrate = tp->snd_cwnd * tp->mss_cache * 8 / ca->curr_rtt;
 
 			// packet pair bandwidth estimation
-			packet_pair_time = now - ca->last_ack;
-			if (packet_pair_time > 0 && packet_pair_time <= 200)
+			if (ca->est_round_cnt <= 2)
 			{
-				u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
-				// printk(KERN_INFO "CUBIC (port: %hu) [Round %hu] Now %u, Round Start %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
-				// 	port, round_id, now, ca->round_start, packet_pair_time, est_packet_pair_bd);
+				packet_pair_time = now - ca->last_ack;
+				if (packet_pair_time > 0 && packet_pair_time <= 200)
+				{
+					u32 est_packet_pair_bd = 1500 * 8 / packet_pair_time;
+					printk(KERN_INFO "[CUBIC] ESTIMATION MEDIAN UPDATE: Round %u, Packet pair time %u, Est. bandwidth %u Mb/s\n",
+						ca->est_round_cnt, packet_pair_time, est_packet_pair_bd);
 
-				if (ca->bandwidth_est_median == 0)
-				{
-					ca->bandwidth_est_median = est_packet_pair_bd;
-				}
-				else
-				{
-					ca->bandwidth_est_median += sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1;
-					ca->bandwidth_est_median >>= 1;
+					if (ca->bandwidth_est_median == 0)
+					{
+						ca->bandwidth_est_median = est_packet_pair_bd;
+					}
+					else
+					{
+						ca->bandwidth_est_median += sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1;
+						ca->bandwidth_est_median >>= 1;
+					}
 				}
 			}
 

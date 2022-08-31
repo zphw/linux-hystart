@@ -116,7 +116,7 @@ static inline void bictcp_reset(struct bictcp *ca)
 	memset(ca, 0, offsetof(struct bictcp, unused));
 	ca->found = 0;
 	ca->ignore_cnt = 0;
-	ca->bitrate_est_median = 0;
+	ca->bandwidth_est_median = 0;
 	ca->last_round_start = 0;
 	ca->est_round_cnt = 0;
 }

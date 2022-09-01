@@ -394,16 +394,6 @@ static u32 hystart_ack_delay(struct sock *sk)
 		     div64_ul((u64)GSO_MAX_SIZE * 4 * USEC_PER_SEC, rate));
 }
 
-static int sgn(int x)
-{
-	if (x > 0)
-		return 1;
-	else if (x == 0)
-		return 0;
-	else
-		return -1;
-}
-
 static void hystart_update(struct sock *sk, u32 delay)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -449,9 +439,16 @@ static void hystart_update(struct sock *sk, u32 delay)
 					if (ca->bandwidth_est_median == 0)
 						ca->bandwidth_est_median = est_packet_pair_bd;
 					else
-						ca->bandwidth_est_median += ((sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1) >> 1);
-					printk(KERN_INFO "[CUBIC] Round %u, estimation updated: Packet pair time %u, Est. bandwidth %u Mb/s, after updated %u Mb/s, sgn value: %d\n",
-						ca->est_round_cnt, packet_pair_time, est_packet_pair_bd, ca->bandwidth_est_median, sgn(est_packet_pair_bd - ca->bandwidth_est_median));
+					{
+						// sgn function
+						if (est_packet_pair_bd > ca->bandwidth_est_median)
+							ca->bandwidth_est_median += 1;
+						else if (est_packet_pair_bd < ca->bandwidth_est_median)
+							ca->bandwidth_est_median -= 1;
+					}
+
+					printk(KERN_INFO "[CUBIC] Round %u, estimation updated: Packet pair time %u, Est. bandwidth %u Mb/s, after updated %u Mb/s\n",
+						ca->est_round_cnt, packet_pair_time, est_packet_pair_bd, ca->bandwidth_est_median);
 				}
 				else
 				{

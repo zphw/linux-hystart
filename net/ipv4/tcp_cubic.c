@@ -105,9 +105,9 @@ struct bictcp {
 	u32	end_seq;	/* end_seq of the round */
 	u32	last_ack;	/* last time when the ACK spacing is close */
 	u32	curr_rtt;	/* the minimum rtt of current round */
-	u8  ignore_cnt;
-	u8  est_round_cnt;
-	u32 bandwidth_est_median;
+	u8	ignore_cnt;
+	u8	est_round_cnt;
+	u32	bandwidth_est_median;
 };
 
 
@@ -457,6 +457,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 						ca->bandwidth_est_median += (sgn(est_packet_pair_bd - ca->bandwidth_est_median) * 2 - 1) >> 1;
 					}
 				}
+				else
+				{
+					printk(KERN_INFO "[CUBIC] Round %u, Ignore sample as packet-pair time is: %u\n",
+						ca->est_round_cnt, packet_pair_time);
+				}
 			}
 
 			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
@@ -474,31 +479,28 @@ static void hystart_update(struct sock *sk, u32 delay)
 		ca->last_ack = now;
 
 		/* first detection parameter - ack-train detection */
-		if (1 == 2) {
+		// threshold = ca->delay_min + hystart_ack_delay(sk);
 
-			threshold = ca->delay_min + hystart_ack_delay(sk);
+		// /* Hystart ack train triggers if we get ack past
+		//  * ca->delay_min/2.
+		//  * Pacing might have delayed packets up to RTT/2
+		//  * during slow start.
+		//  */
+		// if (sk->sk_pacing_status == SK_PACING_NONE)
+		// 	threshold >>= 1;
 
-			/* Hystart ack train triggers if we get ack past
-			 * ca->delay_min/2.
-			 * Pacing might have delayed packets up to RTT/2
-			 * during slow start.
-			 */
-			if (sk->sk_pacing_status == SK_PACING_NONE)
-				threshold >>= 1;
-
-			if ((s32)(now - ca->round_start) > threshold) {
-				ca->found = 1;
-				pr_debug("hystart_ack_train (%u > %u) delay_min %u (+ ack_delay %u) cwnd %u\n",
-					 now - ca->round_start, threshold,
-					 ca->delay_min, hystart_ack_delay(sk), tcp_snd_cwnd(tp));
-				NET_INC_STATS(sock_net(sk),
-					      LINUX_MIB_TCPHYSTARTTRAINDETECT);
-				NET_ADD_STATS(sock_net(sk),
-					      LINUX_MIB_TCPHYSTARTTRAINCWND,
-					      tcp_snd_cwnd(tp));
-				tp->snd_ssthresh = tcp_snd_cwnd(tp);
-			}
-		}
+		// if ((s32)(now - ca->round_start) > threshold) {
+		// 	ca->found = 1;
+		// 	pr_debug("hystart_ack_train (%u > %u) delay_min %u (+ ack_delay %u) cwnd %u\n",
+		// 		 now - ca->round_start, threshold,
+		// 		 ca->delay_min, hystart_ack_delay(sk), tcp_snd_cwnd(tp));
+		// 	NET_INC_STATS(sock_net(sk),
+		// 		      LINUX_MIB_TCPHYSTARTTRAINDETECT);
+		// 	NET_ADD_STATS(sock_net(sk),
+		// 		      LINUX_MIB_TCPHYSTARTTRAINCWND,
+		// 		      tcp_snd_cwnd(tp));
+		// 	tp->snd_ssthresh = tcp_snd_cwnd(tp);
+		// }
 	}
 
 	if (hystart_detect & HYSTART_DELAY) {

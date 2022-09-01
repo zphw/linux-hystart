@@ -464,8 +464,8 @@ static void hystart_update(struct sock *sk, u32 delay)
 				}
 			}
 
-			printk(KERN_INFO "[CUBIC] sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
-				tp->snd_cwnd, ca->curr_rtt, bitrate, ca->bandwidth_est_median);
+			printk(KERN_INFO "[CUBIC] Round %u, sending cwnd %u, RTT %u, bitrate %llu Mb/s, threshold %hu\n",
+				ca->est_round_cnt, tp->snd_cwnd, ca->curr_rtt, bitrate, ca->bandwidth_est_median);
 
 			if (ca->bandwidth_est_median > 0 && bitrate >= ca->bandwidth_est_median)
 			{
